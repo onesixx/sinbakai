@@ -1,0 +1,16 @@
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - numpy < 2
+
+  - torchvision
+  - torchmetrics
+  - pytorch-lightning
+
+  - setuptools
+  - lightning
+
+  - matplotlib
+  - seaborn
