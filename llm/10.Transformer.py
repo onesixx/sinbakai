@@ -144,7 +144,7 @@ class MultiHeadAttention(nn.Module):
         self.depth = d_model // self.num_heads
 
         self.query_dense = nn.Linear(d_model, d_model)
-        self.key_dense = nn.Linear(d_model, d_model)
+        self.key_dense   = nn.Linear(d_model, d_model)
         self.value_dense = nn.Linear(d_model, d_model)
 
         self.dense = nn.Linear(d_model, d_model)
@@ -157,11 +157,11 @@ class MultiHeadAttention(nn.Module):
         batch_size = query.shape[0]
 
         query = self.query_dense(query)
-        key = self.key_dense(key)
+        key   = self.key_dense(key)
         value = self.value_dense(value)
 
         query = self.split_heads(query, batch_size)
-        key = self.split_heads(key, batch_size)
+        key   = self.split_heads(key, batch_size)
         value = self.split_heads(value, batch_size)
 
         scaled_attention, _ = scaled_dot_product_attention(query, key, value, mask)
