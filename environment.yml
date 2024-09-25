@@ -3,6 +3,8 @@ channels:
   - defaults
 
 dependencies:
+  - jupyter
+  - ipywidgets
   - numpy < 2
 
   - torchvision
@@ -14,3 +16,8 @@ dependencies:
 
   - matplotlib
   - seaborn
+
+  - transformers
+  - datasets
+  - accelerate
+  - bitsandbytes

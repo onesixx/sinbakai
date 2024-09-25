@@ -133,6 +133,8 @@ temp_out, temp_attn = scaled_dot_product_attention(temp_q, temp_k, temp_v, None)
 print(temp_attn) # 어텐션 분포(어텐션 가중치의 나열)
 print(temp_out) # 어텐션 값
 
+
+###### ------ . MultiHead Attention ------ ######
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, num_heads, name="multi_head_attention"):
         super(MultiHeadAttention, self).__init__()
@@ -172,3 +174,203 @@ class MultiHeadAttention(nn.Module):
         outputs = self.dense(concat_attention)
 
         return outputs
+
+def create_padding_mask(x):
+    mask = torch.eq(x, 0).float()
+    # (batch_size, 1, 1, key의 문장 길이)
+    return mask.unsqueeze(1).unsqueeze(2)
+
+# 예제 실행
+x = torch.tensor([[1, 21, 777, 0, 0]])
+mask = create_padding_mask(x) #  1의 값을 가진 위치의 열을 어텐션 스코어 행렬에서 마스킹하는 용도로 사용 가능
+print(mask)
+# [[1, 21, 777, 0, 0]] 벡터를 스케일드 닷 프로덕트 어텐션의 인자로 전달하면,
+# 스케일드 닷 프로덕트 어텐션에서는 위 벡터에다가 매우 작은 음수값인 -1e9를 곱하고,
+# 이를 행렬에 더해주어 해당 열을 전부 마스킹(1)
+
+###### Position-wise FF NN (Feed Forward Neural Network)
+
+###### ------ Encoder ------ ######
+class EncoderLayer(nn.Module):
+    def __init__(self, dff, d_model, num_heads, dropout=0.1):
+        super(EncoderLayer, self).__init__()
+        self.multi_head_attention = MultiHeadAttention(d_model, num_heads)
+        self.dropout1 = nn.Dropout(dropout)
+        self.norm1 = nn.LayerNorm(d_model, eps=1e-6)
+
+        self.dense1 = nn.Linear(d_model, dff)
+        self.dense2 = nn.Linear(dff, d_model)
+        self.dropout2 = nn.Dropout(dropout)
+        self.norm2 = nn.LayerNorm(d_model, eps=1e-6)
+
+    def forward(self, x, padding_mask):
+        attn_output = self.multi_head_attention(x, x, x, padding_mask)
+        attn_output = self.dropout1(attn_output)
+        out1 = self.norm1(x + attn_output)
+
+        ffn_output = F.relu(self.dense1(out1))
+        ffn_output = self.dense2(ffn_output)
+        ffn_output = self.dropout2(ffn_output)
+        out2 = self.norm2(out1 + ffn_output)
+
+        return out2
+
+class Encoder(nn.Module):
+    def __init__(self, vocab_size, num_layers, dff, d_model, num_heads, dropout):
+        super(Encoder, self).__init__()
+        self.d_model = d_model
+        self.num_layers = num_layers
+
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.pos_encoding = PositionalEncoding(vocab_size, d_model)
+        self.enc_layers = nn.ModuleList([EncoderLayer(dff, d_model, num_heads, dropout) for _ in range(num_layers)])
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, padding_mask):
+        seq_len = x.shape[1]
+
+        # Adding embedding and position encoding.
+        x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
+        x *= torch.sqrt(torch.tensor(self.d_model, dtype=torch.float32))
+        x = self.pos_encoding(x)
+
+        x = self.dropout(x)
+
+        for i in range(self.num_layers):
+            x = self.enc_layers[i](x, padding_mask)
+
+        return x  # (batch_size, input_seq_len, d_model)
+
+
+###### ------ Encoder Layer ------ ######
+def create_look_ahead_mask(x):
+    seq_len = x.shape[1]
+    look_ahead_mask = torch.ones(seq_len, seq_len).triu(diagonal=1)  # 대각선 위의 값을 1로 채움
+    padding_mask = create_padding_mask(x)  # 앞서 정의한 패딩 마스크 함수 사용
+
+    # 룩어헤드 마스크와 패딩 마스크의 최댓값을 취함
+    # 룩어헤드 마스크와 패딩 마스크는 (batch_size, 1, seq_len, seq_len) 형태로 확장 필요
+    look_ahead_mask = look_ahead_mask.unsqueeze(0).unsqueeze(0)
+    max_mask = torch.max(look_ahead_mask, padding_mask)
+    return max_mask
+
+# 예제 실행
+x = torch.tensor([[1, 2, 3, 0, 0]])
+mask = create_look_ahead_mask(x)
+print(mask)
+#룩어헤드 마스크(look-ahead mask)와 패딩 마스크(padding mask)를 결합한 결과
+
+###### ------ Decoder  ------ ######
+class DecoderLayer(nn.Module):
+    def __init__(self, dff, d_model, num_heads, dropout=0.1):
+        super(DecoderLayer, self).__init__()
+        self.mha1 = MultiHeadAttention(d_model, num_heads)
+        self.mha2 = MultiHeadAttention(d_model, num_heads)
+
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, dff),
+            nn.ReLU(),
+            nn.Linear(dff, d_model),
+        )
+
+        self.layernorm1 = nn.LayerNorm(d_model, eps=1e-6)
+        self.layernorm2 = nn.LayerNorm(d_model, eps=1e-6)
+        self.layernorm3 = nn.LayerNorm(d_model, eps=1e-6)
+
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+        self.dropout3 = nn.Dropout(dropout)
+
+    def forward(self, x, enc_output, look_ahead_mask, padding_mask):
+        # 셀프 어텐션과 레이어 정규화
+        attn1, _ = self.mha1(x, x, x, look_ahead_mask)
+        attn1 = self.dropout1(attn1)
+        out1 = self.layernorm1(attn1 + x)
+
+        # 디코더-인코더 어텐션과 레이어 정규화
+        attn2, _ = self.mha2(enc_output, enc_output, out1, padding_mask)
+        attn2 = self.dropout2(attn2)
+        out2 = self.layernorm2(attn2 + out1)
+
+        # 피드 포워드 네트워크와 레이어 정규화
+        ffn_output = self.ffn(out2)
+        ffn_output = self.dropout3(ffn_output)
+        out3 = self.layernorm3(ffn_output + out2)
+
+        return out3
+
+
+class Decoder(nn.Module):
+    def __init__(self, vocab_size, num_layers, dff, d_model, num_heads, dropout):
+        super(Decoder, self).__init__()
+        self.d_model = d_model
+        self.num_layers = num_layers
+
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.pos_encoding = PositionalEncoding(vocab_size, d_model)
+
+        self.dec_layers = nn.ModuleList([
+            DecoderLayer(dff, d_model, num_heads, dropout) for _ in range(num_layers)
+        ])
+
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, enc_output, look_ahead_mask, padding_mask):
+        seq_len = x.size(1)
+
+        x = self.embedding(x)  # (batch_size, target_seq_len, d_model)
+        x *= torch.sqrt(torch.tensor(self.d_model, dtype=torch.float32))
+        x = self.pos_encoding(x)
+
+        x = self.dropout(x)
+
+        for i in range(self.num_layers):
+            x = self.dec_layers[i](x, enc_output, look_ahead_mask, padding_mask)
+
+        return x  # (batch_size, target_seq_len, d_model)
+
+###### ------ Transformer
+class Transformer(nn.Module):
+    def __init__(self, vocab_size, num_layers, dff, d_model, num_heads, dropout):
+        super(Transformer, self).__init__()
+        self.encoder = Encoder(vocab_size, num_layers, dff, d_model, num_heads, dropout)
+        self.decoder = Decoder(vocab_size, num_layers, dff, d_model, num_heads, dropout)
+        self.final_layer = nn.Linear(d_model, vocab_size)
+
+    def forward(self, inp, tar, enc_padding_mask, look_ahead_mask, dec_padding_mask):
+        enc_output = self.encoder(inp, enc_padding_mask)
+        dec_output = self.decoder(tar, enc_output, look_ahead_mask, dec_padding_mask)
+        final_output = self.final_layer(dec_output)
+        return final_output
+
+# 하이퍼파라미터 정의
+small_transformer = Transformer(
+    vocab_size=9000,
+    num_layers=4,
+    dff=512,
+    d_model=128,
+    num_heads=4,
+    dropout=0.3
+)
+small_transformer
+
+# loss function 정의
+def loss_function(y_true, y_pred, pad_token=0):
+    # y_true의 shape을 조정하지 않아도 되며, PyTorch CrossEntropyLoss가 처리합니다.
+    # y_pred: (batch_size, seq_len, vocab_size), y_true: (batch_size, seq_len)
+
+    # CrossEntropyLoss는 target이 (N, ) 형태이고 입력이 (N, C)인 경우 자동으로 평탄화(flatten)을 수행합니다.
+    # 여기서 N은 배치 크기 * 시퀀스 길이, C는 클래스 수(어휘 크기)입니다.
+    # 그러나 여기서는 시퀀스 길이를 직접 관리하므로, 수동으로 평탄화하지 않고,
+    # 대신 mask를 적용하여 패딩 토큰을 제외합니다.
+
+    loss_obj = torch.nn.CrossEntropyLoss(reduction='none')  # 각 요소별로 손실 계산
+    loss = loss_obj(y_pred.view(-1, y_pred.size(-1)), y_true.view(-1))
+
+    mask = (y_true != pad_token).float()  # 패딩이 아닌 위치는 1, 패딩 위치는 0인 마스크
+    loss = loss * mask.view(-1)  # 마스크 적용
+
+    # 마스크를 적용한 후 평균 손실을 계산
+    loss = torch.sum(loss) / torch.sum(mask)
+
+    return loss
