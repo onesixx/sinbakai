@@ -14,5 +14,6 @@ print(hypothesis)
 print(hypothesis.sum(dim=1))
 
 y = torch.randint(5, (3,)).long()
-  git config --global user.email "you@example.com"
-  git config --global user.name "Your Name"
+
+y_one_hot = torch.zeros_like(hypothesis)
+y_one_hot.scatter_(1, y.unsqueeze(1), 1)  # 차원dim  index, src할당값
