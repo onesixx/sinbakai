@@ -137,3 +137,66 @@ arr = np.arange(0, 32)
 # array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
 #        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
 v = arr.reshape([4,2,4])
+
+#------------------------------------------------------------
+# 1차원 텐서 (벡터)
+# 2차원 텐서 (행렬)
+# 3차원 텐서
+import torch
+import torch.nn.functional as F
+# 1차원 텐서(벡터)  차원은 하나의 축
+# 차원 수(dimensions): 1    1차원 (차원갯수=축의갯수)
+# 축(axis): 0      축의갯수는 1개
+# 크기(size): 3    3개의 원소   (1st차원의 크기)
+# shape: (3,)      표현방식이 다름. 각 차원의 크기
+
+vector = torch.tensor([1, 2, 3])
+torch.FloatTensor([1, 2, 3]).ndimension()
+torch.randint(5, (3,)).long().ndimension()
+
+print(vector)
+print("# of dimensions:", vector.ndimension())
+print("axis:", list(range(vector.ndimension())))
+print("size:", vector.shape)
+print("shape:", tuple(vector.shape))
+
+v = torch.squeeze(torch.FloatTensor(3,1))
+F.softmax(v, dim=0)
+
+m = torch.FloatTensor(3, 2)
+F.softmax(m, dim=0)
+F.softmax(m, dim=1)
+
+
+
+# 2차원 텐서 (행렬)
+matrix = torch.tensor([
+    [1, 2, 3],
+    [4, 5, 6]
+])
+print("\n2D Tensor (Matrix): \n\t", matrix)
+print("# of dimensions:", matrix.ndimension())
+print("axis:", list(range(matrix.ndimension())))
+print("size:", matrix.shape)
+print("shape:", tuple(matrix.shape))
+
+# 3차원 텐서
+tensor_3d = torch.tensor([
+    [
+        [1, 2,3],
+        [3, 4,5]],
+    [
+        [5, 6,7],
+        [7, 8, 9]],
+    [
+        [9, 10, 11],
+        [11, 12, 13]],
+    [
+        [13, 14, 15],
+        [15, 16, 17]]
+])
+print( tensor_3d)
+print("# of dimensions:", tensor_3d.ndimension())
+print("axis:", list(range(tensor_3d.ndimension())))
+print("size:", tensor_3d.size())  # = tensor_3d.shape
+print("shape:", tuple(tensor_3d.shape))
