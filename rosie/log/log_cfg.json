@@ -6,7 +6,7 @@
         "simple": {
             "format": "=>| %(levelname)s | %(pathname)s:%(lineno)d | %(asctime)s |\n=>| %(message)s  ",
             "datefmt": "%Y-%m-%d %H:%M:%S",
-            "class": "rose.log.log_color.ColoredFormatter"
+            "class": "rosie.log.log_color.ColoredFormatter"
         },
         "verbose": {
             "format": "[%(asctime)s | %(levelname)s | %(module)s | %(filename)s:%(lineno)d ] %(message)s",
@@ -27,21 +27,14 @@
             "maxBytes": 10240,
             "backupCount": 16,
             "encoding": "utf8"
-        },
-        "queue_handler": {
-            "class": "logging.handlers.QueueHandler",
-            "handlers": [
-                "stdout",
-                "file"
-            ],
-            "respect_handler_level": true
         }
     },
     "loggers": {
         "root": {
             "level": "DEBUG",
             "handlers": [
-                "queue_handler"
+                "stdout",
+                "file"
             ]
         }
     }
