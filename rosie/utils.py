@@ -1,5 +1,5 @@
 """
-This module contains utility functions that are used in the rose_template app.
+This module contains utility functions that are used in the rosie_template app.
 """
 
 #!/usr/bin/env python
@@ -10,52 +10,8 @@ from datetime import datetime, timedelta
 import warnings
 import json
 
-from shiny import ui
 import pandas as pd
 import numpy as np
-
-def show_modal_warning(msg, title="Warning : "):
-    warnings.warn("This is my warning message ")
-    msg_mod_not_selected = ui.modal(
-        msg,
-        title=title,
-        easy_close=True,
-        footer=None,
-    )
-    ui.modal_show(msg_mod_not_selected)
-
-
-def tooltip_style(hover_info:json, offset_left:int=0, offset_top:int=0 ) -> str:
-    """
-    Generates a CSS style string for tooltip positioning.
-    Args:
-        hover_info (json): Information about the hover event, including coordinates and range.
-        offset_left (int, optional): Horizontal offset from the hover point. Defaults to 0.
-        offset_top (int, optional): Vertical offset from the hover point. Defaults to 0.
-    Returns:
-        str: A string representing the CSS style for tooltip positioning.
-    """
-    # logging.info(f'hover_info : {json.dumps(hover_info, indent=2)}')
-    left_px = hover_info['range']['left'] + hover_info['coords_css']['x'] + offset_left
-    top_px  = hover_info['range']['top']  + hover_info['coords_css']['y'] + offset_top
-    style = f"""
-        position:absolute;
-        left:{left_px}px; top:{top_px}px;
-        margin:0;
-        padding:6px;
-        z-index:1;
-        background-color:rgba(166, 166, 166, 0.66);
-        border-radius: 6px;
-        transform: translateY(6px);
-        transition: all 0.3s ease-in-out;
-        box-shadow: 0 0 3px rgba(56, 54, 54, 0.86);
-        color: #000;
-        font-size: small;
-    """
-    return style
-
-
-
 
 def conv_hms(miliseconds):
     #miliseconds = 19036

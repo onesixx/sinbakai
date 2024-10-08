@@ -1,5 +1,5 @@
 import logging
-from rose import BASE_DIR
+from rosie import BASE_DIR
 
 logger = logging.getLogger("shinylog")
 LOG_DIR = BASE_DIR.joinpath('logs').resolve()
