@@ -1,6 +1,7 @@
 slave/data/
 slave/saved_models/
 
+slave/data0/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
