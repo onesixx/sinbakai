@@ -8,7 +8,7 @@ import json
 import atexit
 import os
 from pathlib import Path
-from rosie.config_path import BASE_DIR
+from rosie.config import BASE_DIR
 
 # Use my own logger , not the root logger
 logger = logging.getLogger("sixx_logger")

@@ -1,5 +1,7 @@
+data/
 slave/data/
 slave/saved_models/
+VisionTransformer/data
 
 slave/data0/
 # Byte-compiled / optimized / DLL files

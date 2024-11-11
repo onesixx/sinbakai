@@ -4,7 +4,7 @@ setup_logging('app_all.log')
 from rosie.log import logger
 logger.info("Let's go, rosie!!")
 
-from .config_path import (
+from .config import (
     # HOME_DIR,
     # DOWNLOADS_DIR,
 
